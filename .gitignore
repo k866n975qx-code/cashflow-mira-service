@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Env & secrets
+.env
+.env.*
+
+# Logs & local junk
+*.log
+*.tmp
+
+# DB artifacts (keep schema & migrations, ignore dumps)
+*.dump
+*.sql.gz
+
+# Node leftovers (just in case)
+node_modules/
