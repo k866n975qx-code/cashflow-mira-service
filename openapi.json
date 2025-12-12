@@ -1,82 +1,529 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Cashflow Minimal API",
-    "version": "1.0.0",
-    "description": "Read-only Lunch Money ingest + local cashflow controls. Minimal endpoints for GPT Actions."
+    "title": "Cashflow (GPT Actions) \u2013 Strict",
+    "version": "0.2.0",
+    "description": "Cashflow Minimal service for transactions, categories, budgets, bills, balances, EF, breakdown planning, and snapshots. Shapes derived from service code."
   },
   "servers": [
-    { "url": "https://cashflow.joseai.dev" }
+    {
+      "url": "https://cashflow.joseai.dev"
+    }
   ],
   "paths": {
-    "/healthz": {
-      "get": {
-        "summary": "Health check",
-        "operationId": "getHealthz",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } }, "required": ["ok"] } } }
-          }
-        }
-      }
-    },
     "/sync": {
       "post": {
-        "summary": "Sync LM → DB (insert-only into transactions)",
-        "operationId": "syncLunchMoney",
+        "tags": [
+          "sync"
+        ],
+        "summary": "Sync",
+        "operationId": "sync_sync_post",
         "parameters": [
-          { "in": "query", "name": "days", "schema": { "type": "integer", "minimum": 1, "default": 1 }, "required": false, "description": "Default 1; use 90 once for initial backfill" },
-          { "in": "query", "name": "start", "schema": { "type": "string", "format": "date" }, "required": false },
-          { "in": "query", "name": "end", "schema": { "type": "string", "format": "date" }, "required": false }
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Number of trailing days to sync"
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Sync summary",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncResponse" } } }
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "end": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "fetched": {
+                      "type": "integer"
+                    },
+                    "upserted_into_lm_transactions": {
+                      "type": "integer"
+                    },
+                    "inserted_into_transactions": {
+                      "type": "integer"
+                    },
+                    "accounts_processed": {
+                      "type": "integer"
+                    },
+                    "balance_snapshots": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end",
+                    "fetched",
+                    "upserted_into_lm_transactions",
+                    "inserted_into_transactions",
+                    "accounts_processed",
+                    "balance_snapshots"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
           }
         }
       }
     },
     "/transactions": {
       "get": {
-        "summary": "List transactions",
-        "operationId": "listTransactions",
+        "tags": [
+          "transactions"
+        ],
+        "summary": "List Transactions",
+        "operationId": "list_transactions_transactions_get",
         "parameters": [
-          { "in": "query", "name": "from", "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "ignored", "schema": { "type": "boolean" } },
-          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 200, "minimum": 1, "maximum": 1000 } },
-          { "in": "query", "name": "offset", "schema": { "type": "integer", "default": 0, "minimum": 0 } }
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ignored",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Array of transactions",
-            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Transaction" } } } }
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lm_id": {
+                        "type": "integer"
+                      },
+                      "date_posted": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "amount": {
+                        "type": "number"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "payee": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "category": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "ignored": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "lm_id",
+                      "date_posted",
+                      "amount",
+                      "currency"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
           }
         }
       }
     },
     "/transactions/{lm_id}": {
       "get": {
-        "summary": "Get a transaction",
-        "operationId": "getTransaction",
-        "parameters": [{ "in": "path", "name": "lm_id", "required": true, "schema": { "type": "integer" } }],
-        "responses": { "200": { "description": "Transaction", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } } }, "404": { "description": "Not found" } }
+        "tags": [
+          "transactions"
+        ],
+        "summary": "Get Transaction",
+        "operationId": "get_transaction_transactions__lm_id__get",
+        "parameters": [
+          {
+            "name": "lm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lm_id": {
+                      "type": "integer"
+                    },
+                    "date_posted": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "amount": {
+                      "type": "number"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "payee": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "category": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "ignored": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "lm_id",
+                    "date_posted",
+                    "amount",
+                    "currency"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       },
       "patch": {
-        "summary": "Patch a transaction (category, ignored, note, payee)",
-        "operationId": "patchTransaction",
-        "parameters": [{ "in": "path", "name": "lm_id", "required": true, "schema": { "type": "integer" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TransactionPatch" } } } },
-        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } } }, "404": { "description": "Not found" } }
+        "tags": [
+          "transactions"
+        ],
+        "summary": "Patch Transaction",
+        "operationId": "patch_transaction_transactions__lm_id__patch",
+        "parameters": [
+          {
+            "name": "lm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ignored": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "payee": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lm_id": {
+                      "type": "integer"
+                    },
+                    "date_posted": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "amount": {
+                      "type": "number"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "payee": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "category": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "ignored": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "lm_id",
+                    "date_posted",
+                    "amount",
+                    "currency"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/transactions/batch": {
       "post": {
+        "tags": [
+          "transactions"
+        ],
         "summary": "Batch patch transactions (category, ignored, note, payee)",
-        "operationId": "batchPatchTransactions",
-        "description": "Apply category / ignored / note / payee changes to multiple transactions at once. Mirrors the single-transaction patch semantics and logs to transaction_changes.",
+        "operationId": "batch_patch_transactions_transactions_batch_post",
         "requestBody": {
           "required": true,
           "content": {
@@ -89,552 +536,2997 @@
                     "items": {
                       "type": "object",
                       "properties": {
-                        "lm_id": { "type": "integer" },
-                        "category": { "type": ["string", "null"] },
-                        "ignored": { "type": ["boolean", "null"] },
-                        "note": { "type": ["string", "null"] },
-                        "payee": { "type": ["string", "null"] }
+                        "lm_id": {
+                          "type": "integer"
+                        },
+                        "category": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "ignored": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "payee": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
                       },
-                      "required": ["lm_id"]
+                      "required": [
+                        "lm_id"
+                      ],
+                      "additionalProperties": true
                     }
                   }
                 },
-                "required": ["operations"]
+                "required": [
+                  "operations"
+                ],
+                "additionalProperties": true
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Array of updated transactions.",
-            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Transaction" } } } }
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lm_id": {
+                        "type": "integer"
+                      },
+                      "date_posted": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "amount": {
+                        "type": "number"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "payee": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "category": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "ignored": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "lm_id",
+                      "date_posted",
+                      "amount",
+                      "currency"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
           }
         }
       }
     },
     "/categories": {
       "get": {
-        "summary": "List categories",
-        "operationId": "listCategories",
-        "responses": { "200": { "description": "Array", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } } } } } }
+        "tags": [
+          "categories"
+        ],
+        "summary": "List Categories",
+        "operationId": "list_categories_categories_get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "affects_cashflow": {
+                        "type": "boolean"
+                      },
+                      "budgetable": {
+                        "type": "boolean"
+                      },
+                      "is_income": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "affects_cashflow",
+                      "budgetable",
+                      "is_income"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "summary": "Create category",
-        "operationId": "createCategory",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryCreate" } } } },
-        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "id": { "type": "string" } }, "required": ["ok","id"] } } } } }
+        "tags": [
+          "categories"
+        ],
+        "summary": "Create Category",
+        "operationId": "create_category_categories_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Your id, e.g. 'groceries'"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "affects_cashflow": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "budgetable": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "is_income": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
       }
     },
     "/categories/{id}": {
       "patch": {
-        "summary": "Patch category flags/name",
-        "operationId": "updateCategory",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CategoryPatch" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } }, "required": ["ok"] } } } }, "404": { "description": "Not found" } }
+        "tags": [
+          "categories"
+        ],
+        "summary": "Patch Category",
+        "operationId": "patch_category_categories__id__patch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "affects_cashflow": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "budgetable": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "is_income": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       },
       "delete": {
-        "summary": "Delete category",
-        "operationId": "deleteCategory",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "responses": { "204": { "description": "Deleted" }, "404": { "description": "Not found" } }
+        "tags": [
+          "categories"
+        ],
+        "summary": "Delete Category",
+        "operationId": "delete_category_categories__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/budgets": {
       "get": {
-        "summary": "List budgets for a month",
-        "operationId": "listBudgets",
-        "parameters": [
-          { "in": "query", "name": "year", "required": true, "schema": { "type": "integer", "minimum": 2000, "maximum": 2100 } },
-          { "in": "query", "name": "month", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 12 } }
+        "tags": [
+          "budgets"
         ],
-        "responses": { "200": { "description": "Array", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/BudgetItem" } } } } } }
+        "summary": "List Budgets",
+        "operationId": "list_budgets_budgets_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "category_id": {
+                        "type": "string"
+                      },
+                      "category_name": {
+                        "type": "string"
+                      },
+                      "year": {
+                        "type": "integer"
+                      },
+                      "month": {
+                        "type": "integer"
+                      },
+                      "amount": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "category_id",
+                      "category_name",
+                      "year",
+                      "month",
+                      "amount"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
       }
     },
     "/budgets/{category_id}/{year}-{month}": {
       "put": {
-        "summary": "Upsert a monthly budget row",
-        "operationId": "upsertBudget",
-        "parameters": [
-          { "in": "path", "name": "category_id", "required": true, "schema": { "type": "string" } },
-          { "in": "path", "name": "year", "required": true, "schema": { "type": "integer" } },
-          { "in": "path", "name": "month", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 12 } }
+        "tags": [
+          "budgets"
         ],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BudgetUpsert" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "category_id": { "type": "string" }, "year": { "type": "integer" }, "month": { "type": "integer" }, "amount": { "type": "number" } }, "required": ["ok","category_id","year","month","amount"] } } } } }
+        "summary": "Upsert Budget",
+        "operationId": "upsert_budget_budgets__category_id___year___month__put",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "category_id": {
+                      "type": "string"
+                    },
+                    "year": {
+                      "type": "integer"
+                    },
+                    "month": {
+                      "type": "integer"
+                    },
+                    "amount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "category_id",
+                    "year",
+                    "month",
+                    "amount"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
       }
     },
     "/cashflow/budget-vs-actual": {
       "get": {
-        "summary": "Budget vs actual for a month",
-        "operationId": "budgetVsActual",
-        "parameters": [
-          { "in": "query", "name": "year", "required": true, "schema": { "type": "integer", "minimum": 2000, "maximum": 2100 } },
-          { "in": "query", "name": "month", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 12 } }
+        "tags": [
+          "cashflow"
         ],
-        "responses": { "200": { "description": "Array", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/BudgetVsActualItem" } } } } } }
+        "summary": "Budget Vs Actual",
+        "operationId": "budget_vs_actual_cashflow_budget_vs_actual_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "category_id": {
+                        "type": "string"
+                      },
+                      "category_name": {
+                        "type": "string"
+                      },
+                      "budgeted": {
+                        "type": "number"
+                      },
+                      "actual": {
+                        "type": "number"
+                      },
+                      "variance": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "category_id",
+                      "category_name",
+                      "budgeted",
+                      "actual",
+                      "variance"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
       }
     },
     "/bills": {
       "get": {
-        "summary": "List bills",
-        "operationId": "listBills",
-        "responses": { "200": { "description": "Array of bills", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Bill" } } } } } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "List Bills",
+        "operationId": "list_bills_bills_get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "number"
+                      },
+                      "currency": {
+                        "type": "string"
+                      },
+                      "frequency": {
+                        "type": "string",
+                        "enum": [
+                          "weekly",
+                          "monthly",
+                          "yearly"
+                        ]
+                      },
+                      "weekday": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "day_of_month": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 31
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "start_date": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "end_date": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "amount",
+                      "currency",
+                      "frequency"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
-        "summary": "Create bill",
-        "operationId": "createBill",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BillCreate" } } } },
-        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "id": { "type": "string" }, "created": { "type": "boolean" } }, "required": ["ok","id","created"] } } } } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "Create Bill",
+        "operationId": "create_bill_bills_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "your id, e.g. 'rent'"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "default": "USD"
+                  },
+                  "frequency": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "monthly",
+                      "yearly"
+                    ]
+                  },
+                  "weekday": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "day_of_month": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_date": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_date": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "amount",
+                  "frequency"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "id",
+                    "created"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
       }
     },
     "/bills/{id}": {
       "patch": {
-        "summary": "Patch bill",
-        "operationId": "updateBill",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BillPatch" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } }, "required": ["ok"] } } } }, "404": { "description": "Not found" } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "Patch Bill",
+        "operationId": "patch_bill_bills__id__patch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "amount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "currency": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "frequency": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "weekly",
+                          "monthly",
+                          "yearly"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "weekday": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "day_of_month": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "start_date": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end_date": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       },
       "delete": {
-        "summary": "Delete bill",
-        "operationId": "deleteBill",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "responses": { "204": { "description": "Deleted" }, "404": { "description": "Not found" } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "Delete Bill",
+        "operationId": "delete_bill_bills__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/bills/{id}/contribute": {
       "post": {
-        "summary": "Add contribution to bill ledger",
-        "operationId": "contributeToBill",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContribBody" } } } },
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" } }, "required": ["ok"] } } } } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "Contribute",
+        "operationId": "contribute_bills__id__contribute_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/bills/{id}/mark-paid": {
       "post": {
-        "summary": "Mark bill as paid (idempotent)",
-        "operationId": "markBillPaid",
-        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "object", "properties": { "ok": { "type": "boolean" }, "already_paid": { "type": "boolean" }, "period_start": { "type": "string", "format": "date" }, "due": { "type": "string", "format": "date" } }, "required": ["ok","already_paid","period_start","due"] } } } }, "404": { "description": "Not found" } }
+        "tags": [
+          "bills"
+        ],
+        "summary": "Mark Paid",
+        "operationId": "mark_paid_bills__id__mark_paid_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "already_paid": {
+                      "type": "boolean"
+                    },
+                    "period_start": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "due": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "already_paid",
+                    "period_start",
+                    "due"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/bills/occurrences": {
       "get": {
-        "summary": "List bill occurrences with progress",
-        "operationId": "listBillOccurrences",
-        "parameters": [
-          { "in": "query", "name": "from", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "due_soon_days", "required": false, "schema": { "type": "integer", "default": 14, "minimum": 1, "maximum": 60 } }
+        "tags": [
+          "bills"
         ],
-        "responses": { "200": { "description": "Array", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/BillOccurrence" } } } } } }
+        "summary": "Occurrences",
+        "operationId": "occurrences_bills_occurrences_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "due_soon_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "default": 14
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bill_id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "due": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "amount": {
+                        "type": "number"
+                      },
+                      "progress_pct": {
+                        "type": "number"
+                      },
+                      "paid": {
+                        "type": "boolean"
+                      },
+                      "saved_so_far": {
+                        "type": "number"
+                      },
+                      "contrib_sum": {
+                        "type": "number"
+                      },
+                      "paid_sum": {
+                        "type": "number"
+                      },
+                      "days_to_due": {
+                        "type": "integer"
+                      },
+                      "due_soon": {
+                        "type": "boolean"
+                      },
+                      "priority_score": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "bill_id",
+                      "name",
+                      "due",
+                      "amount",
+                      "progress_pct",
+                      "paid",
+                      "saved_so_far",
+                      "contrib_sum",
+                      "paid_sum",
+                      "days_to_due",
+                      "due_soon",
+                      "priority_score"
+                    ],
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/bills/{id}/ledger": {
       "get": {
-        "summary": "Inspect bill ledger in a period",
-        "operationId": "getBillLedger",
-        "parameters": [
-          { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } },
-          { "in": "query", "name": "from", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "required": true, "schema": { "type": "string", "format": "date" } }
+        "tags": [
+          "bills"
         ],
-        "responses": { "200": { "description": "Ledger summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BillLedgerResponse" } } } } }
+        "summary": "Bill Ledger",
+        "operationId": "bill_ledger_bills__id__ledger_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bill_id": {
+                      "type": "string"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "contrib_sum": {
+                      "type": "number"
+                    },
+                    "paid_sum": {
+                      "type": "number"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "occurred_at": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "note": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "occurred_at",
+                          "amount"
+                        ],
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "bill_id",
+                    "from",
+                    "to",
+                    "contrib_sum",
+                    "paid_sum",
+                    "entries"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
       }
     },
     "/balances/snapshot": {
       "get": {
-        "summary": "Latest balances per account",
-        "operationId": "getBalancesSnapshot",
-        "responses": { "200": { "description": "Snapshot", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BalancesSnapshot" } } } } }
+        "tags": [
+          "balances"
+        ],
+        "summary": "Snapshot",
+        "operationId": "snapshot_balances_snapshot_get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "liquid_total": {
+                      "type": "number"
+                    },
+                    "non_liquid_total": {
+                      "type": "number"
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "subtype": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "is_liquid": {
+                            "type": "boolean"
+                          },
+                          "balance": {
+                            "type": "number"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "as_of": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "is_liquid",
+                          "balance",
+                          "currency",
+                          "as_of"
+                        ],
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": [
+                    "liquid_total",
+                    "non_liquid_total",
+                    "accounts"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/ef": {
       "get": {
-        "summary": "Emergency fund overview",
-        "operationId": "getEmergencyFund",
-        "responses": { "200": { "description": "EF", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EFResponse" } } } } }
+        "tags": [
+          "ef"
+        ],
+        "summary": "Ef Overview",
+        "operationId": "ef_overview_ef_get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "baseline_monthly_outflow": {
+                      "type": "number"
+                    },
+                    "target": {
+                      "type": "number"
+                    },
+                    "liquid": {
+                      "type": "number"
+                    },
+                    "funded_pct": {
+                      "type": "number"
+                    },
+                    "monthly_income": {
+                      "type": "number"
+                    },
+                    "recommended_contribution": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "baseline_monthly_outflow",
+                    "target",
+                    "liquid",
+                    "funded_pct",
+                    "monthly_income",
+                    "recommended_contribution"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/breakdown": {
       "post": {
-        "summary": "Plan allocation of new inflow",
-        "operationId": "planBreakdown",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BreakdownBody" } } } },
-        "responses": { "200": { "description": "Plan", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BreakdownResponse" } } } } }
+        "tags": [
+          "breakdown"
+        ],
+        "summary": "Plan Breakdown",
+        "operationId": "plan_breakdown_breakdown_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "New inflow to allocate"
+                  },
+                  "reserve_cushion": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 200
+                  },
+                  "due_soon_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 60,
+                    "default": 14
+                  },
+                  "year": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "month": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "amount"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "input_amount": {
+                      "type": "number"
+                    },
+                    "reserve_cushion": {
+                      "type": "number"
+                    },
+                    "allocated": {
+                      "type": "object",
+                      "properties": {
+                        "bills": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "due": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "amount": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "to",
+                              "name",
+                              "due",
+                              "amount"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "budgets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "to",
+                              "name",
+                              "amount"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "ef": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "bills",
+                        "budgets",
+                        "ef"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "to_bills": {
+                          "type": "number"
+                        },
+                        "to_budgets": {
+                          "type": "number"
+                        },
+                        "to_ef": {
+                          "type": "number"
+                        },
+                        "unallocated": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "to_bills",
+                        "to_budgets",
+                        "to_ef",
+                        "unallocated"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "input_amount",
+                    "reserve_cushion",
+                    "allocated",
+                    "summary"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
       }
     },
     "/snapshot": {
       "get": {
-        "summary": "Expanded period snapshot",
-        "operationId": "getSnapshot",
-        "parameters": [
-          { "in": "query", "name": "from", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "required": true, "schema": { "type": "string", "format": "date" } }
+        "tags": [
+          "snapshot"
         ],
-        "responses": { "200": { "description": "Snapshot", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } } } }
+        "summary": "Full Snapshot",
+        "operationId": "full_snapshot_snapshot_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "cashflow": {
+                      "type": "object",
+                      "properties": {
+                        "totals": {
+                          "type": "object",
+                          "properties": {
+                            "inflow": {
+                              "type": "number"
+                            },
+                            "outflow": {
+                              "type": "number"
+                            },
+                            "net": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "inflow",
+                            "outflow",
+                            "net"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "by_category": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "category_id": {
+                                "type": "string"
+                              },
+                              "category_name": {
+                                "type": "string"
+                              },
+                              "is_income": {
+                                "type": "boolean"
+                              },
+                              "is_transfer": {
+                                "type": "boolean"
+                              },
+                              "total": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "category_id",
+                              "category_name",
+                              "is_income",
+                              "is_transfer",
+                              "total"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "top_payees": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "payee": {
+                                "type": "string"
+                              },
+                              "total": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "payee",
+                              "total"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "totals",
+                        "by_category",
+                        "top_payees"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "budgets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category_id": {
+                            "type": "string"
+                          },
+                          "category_name": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "month": {
+                            "type": "integer"
+                          },
+                          "amount": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "category_id",
+                          "category_name",
+                          "year",
+                          "month",
+                          "amount"
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "bills": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "due": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "progress_pct": {
+                            "type": "number"
+                          },
+                          "paid": {
+                            "type": "boolean"
+                          },
+                          "saved_so_far": {
+                            "type": "number"
+                          },
+                          "contrib_sum": {
+                            "type": "number"
+                          },
+                          "paid_sum": {
+                            "type": "number"
+                          },
+                          "days_to_due": {
+                            "type": "integer"
+                          },
+                          "due_soon": {
+                            "type": "boolean"
+                          },
+                          "priority_score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "bill_id",
+                          "name",
+                          "due",
+                          "amount",
+                          "progress_pct",
+                          "paid",
+                          "saved_so_far",
+                          "contrib_sum",
+                          "paid_sum",
+                          "days_to_due",
+                          "due_soon",
+                          "priority_score"
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "balances": {
+                      "type": "object",
+                      "properties": {
+                        "liquid_total": {
+                          "type": "number"
+                        },
+                        "non_liquid_total": {
+                          "type": "number"
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "type": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "subtype": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "is_liquid": {
+                                "type": "boolean"
+                              },
+                              "balance": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "as_of": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "is_liquid",
+                              "balance",
+                              "currency",
+                              "as_of"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "liquid_total",
+                        "non_liquid_total",
+                        "accounts"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "ef_overview": {
+                      "type": "object",
+                      "properties": {
+                        "baseline_monthly_outflow": {
+                          "type": "number"
+                        },
+                        "target": {
+                          "type": "number"
+                        },
+                        "liquid": {
+                          "type": "number"
+                        },
+                        "funded_pct": {
+                          "type": "number"
+                        },
+                        "monthly_income": {
+                          "type": "number"
+                        },
+                        "recommended_contribution": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "baseline_monthly_outflow",
+                        "target",
+                        "liquid",
+                        "funded_pct",
+                        "monthly_income",
+                        "recommended_contribution"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "cashflow",
+                    "balances",
+                    "ef_overview"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/snapshot/latest": {
       "get": {
-        "summary": "Latest snapshot for trailing N days",
-        "operationId": "getLatestSnapshot",
-        "parameters": [
-          { "in": "query", "name": "days", "required": false, "schema": { "type": "integer", "default": 7, "minimum": 1, "maximum": 365 } }
+        "tags": [
+          "snapshot"
         ],
-        "responses": { "200": { "description": "Latest snapshot", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } } } }
+        "summary": "Latest Snapshot",
+        "operationId": "latest_snapshot_snapshot_latest_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 7
+            },
+            "description": "Number of trailing days to include (inclusive of today)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "cashflow": {
+                      "type": "object",
+                      "properties": {
+                        "totals": {
+                          "type": "object",
+                          "properties": {
+                            "inflow": {
+                              "type": "number"
+                            },
+                            "outflow": {
+                              "type": "number"
+                            },
+                            "net": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "inflow",
+                            "outflow",
+                            "net"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "by_category": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "category_id": {
+                                "type": "string"
+                              },
+                              "category_name": {
+                                "type": "string"
+                              },
+                              "is_income": {
+                                "type": "boolean"
+                              },
+                              "is_transfer": {
+                                "type": "boolean"
+                              },
+                              "total": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "category_id",
+                              "category_name",
+                              "is_income",
+                              "is_transfer",
+                              "total"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "top_payees": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "payee": {
+                                "type": "string"
+                              },
+                              "total": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "payee",
+                              "total"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "totals",
+                        "by_category",
+                        "top_payees"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "budgets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category_id": {
+                            "type": "string"
+                          },
+                          "category_name": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "month": {
+                            "type": "integer"
+                          },
+                          "amount": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "category_id",
+                          "category_name",
+                          "year",
+                          "month",
+                          "amount"
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "bills": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "due": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "progress_pct": {
+                            "type": "number"
+                          },
+                          "paid": {
+                            "type": "boolean"
+                          },
+                          "saved_so_far": {
+                            "type": "number"
+                          },
+                          "contrib_sum": {
+                            "type": "number"
+                          },
+                          "paid_sum": {
+                            "type": "number"
+                          },
+                          "days_to_due": {
+                            "type": "integer"
+                          },
+                          "due_soon": {
+                            "type": "boolean"
+                          },
+                          "priority_score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "bill_id",
+                          "name",
+                          "due",
+                          "amount",
+                          "progress_pct",
+                          "paid",
+                          "saved_so_far",
+                          "contrib_sum",
+                          "paid_sum",
+                          "days_to_due",
+                          "due_soon",
+                          "priority_score"
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "balances": {
+                      "type": "object",
+                      "properties": {
+                        "liquid_total": {
+                          "type": "number"
+                        },
+                        "non_liquid_total": {
+                          "type": "number"
+                        },
+                        "accounts": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "type": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "subtype": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "is_liquid": {
+                                "type": "boolean"
+                              },
+                              "balance": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "as_of": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "is_liquid",
+                              "balance",
+                              "currency",
+                              "as_of"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "liquid_total",
+                        "non_liquid_total",
+                        "accounts"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "ef_overview": {
+                      "type": "object",
+                      "properties": {
+                        "baseline_monthly_outflow": {
+                          "type": "number"
+                        },
+                        "target": {
+                          "type": "number"
+                        },
+                        "liquid": {
+                          "type": "number"
+                        },
+                        "funded_pct": {
+                          "type": "number"
+                        },
+                        "monthly_income": {
+                          "type": "number"
+                        },
+                        "recommended_contribution": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "baseline_monthly_outflow",
+                        "target",
+                        "liquid",
+                        "funded_pct",
+                        "monthly_income",
+                        "recommended_contribution"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "cashflow",
+                    "balances",
+                    "ef_overview"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/snapshot/full": {
       "get": {
-        "summary": "Alias of /snapshot with meta attached",
-        "operationId": "getSnapshotFull",
-        "parameters": [
-          { "in": "query", "name": "from", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "required": true, "schema": { "type": "string", "format": "date" } }
+        "tags": [
+          "snapshot"
         ],
-        "responses": { "200": { "description": "Snapshot", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotResponse" } } } } }
+        "summary": "Full Snapshot Full",
+        "operationId": "full_snapshot_full_snapshot_full_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "range": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "format": "date"
+                            },
+                            "to": {
+                              "type": "string",
+                              "format": "date"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "cashflow": {
+                          "type": "object",
+                          "properties": {
+                            "totals": {
+                              "type": "object",
+                              "properties": {
+                                "inflow": {
+                                  "type": "number"
+                                },
+                                "outflow": {
+                                  "type": "number"
+                                },
+                                "net": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "inflow",
+                                "outflow",
+                                "net"
+                              ],
+                              "additionalProperties": true
+                            },
+                            "by_category": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "category_id": {
+                                    "type": "string"
+                                  },
+                                  "category_name": {
+                                    "type": "string"
+                                  },
+                                  "is_income": {
+                                    "type": "boolean"
+                                  },
+                                  "is_transfer": {
+                                    "type": "boolean"
+                                  },
+                                  "total": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "category_id",
+                                  "category_name",
+                                  "is_income",
+                                  "is_transfer",
+                                  "total"
+                                ],
+                                "additionalProperties": true
+                              }
+                            },
+                            "top_payees": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "payee": {
+                                    "type": "string"
+                                  },
+                                  "total": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "payee",
+                                  "total"
+                                ],
+                                "additionalProperties": true
+                              }
+                            }
+                          },
+                          "required": [
+                            "totals",
+                            "by_category",
+                            "top_payees"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "budgets": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "category_id": {
+                                "type": "string"
+                              },
+                              "category_name": {
+                                "type": "string"
+                              },
+                              "year": {
+                                "type": "integer"
+                              },
+                              "month": {
+                                "type": "integer"
+                              },
+                              "amount": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "category_id",
+                              "category_name",
+                              "year",
+                              "month",
+                              "amount"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "bills": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "bill_id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "due": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "progress_pct": {
+                                "type": "number"
+                              },
+                              "paid": {
+                                "type": "boolean"
+                              },
+                              "saved_so_far": {
+                                "type": "number"
+                              },
+                              "contrib_sum": {
+                                "type": "number"
+                              },
+                              "paid_sum": {
+                                "type": "number"
+                              },
+                              "days_to_due": {
+                                "type": "integer"
+                              },
+                              "due_soon": {
+                                "type": "boolean"
+                              },
+                              "priority_score": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "bill_id",
+                              "name",
+                              "due",
+                              "amount",
+                              "progress_pct",
+                              "paid",
+                              "saved_so_far",
+                              "contrib_sum",
+                              "paid_sum",
+                              "days_to_due",
+                              "due_soon",
+                              "priority_score"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "balances": {
+                          "type": "object",
+                          "properties": {
+                            "liquid_total": {
+                              "type": "number"
+                            },
+                            "non_liquid_total": {
+                              "type": "number"
+                            },
+                            "accounts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "integer"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "provider": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "type": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "subtype": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "is_liquid": {
+                                    "type": "boolean"
+                                  },
+                                  "balance": {
+                                    "type": "number"
+                                  },
+                                  "currency": {
+                                    "type": "string"
+                                  },
+                                  "as_of": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "is_liquid",
+                                  "balance",
+                                  "currency",
+                                  "as_of"
+                                ],
+                                "additionalProperties": true
+                              }
+                            }
+                          },
+                          "required": [
+                            "liquid_total",
+                            "non_liquid_total",
+                            "accounts"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "ef_overview": {
+                          "type": "object",
+                          "properties": {
+                            "baseline_monthly_outflow": {
+                              "type": "number"
+                            },
+                            "target": {
+                              "type": "number"
+                            },
+                            "liquid": {
+                              "type": "number"
+                            },
+                            "funded_pct": {
+                              "type": "number"
+                            },
+                            "monthly_income": {
+                              "type": "number"
+                            },
+                            "recommended_contribution": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "baseline_monthly_outflow",
+                            "target",
+                            "liquid",
+                            "funded_pct",
+                            "monthly_income",
+                            "recommended_contribution"
+                          ],
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "cashflow",
+                        "balances",
+                        "ef_overview"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "served_from": {
+                          "type": "string"
+                        },
+                        "cache_age_seconds": {
+                          "type": "number"
+                        },
+                        "snapshot_created_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "served_from",
+                        "cache_age_seconds",
+                        "snapshot_created_at"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/snapshot/diff": {
       "get": {
-        "summary": "Compare current period to previous period",
-        "operationId": "getSnapshotDiff",
-        "parameters": [
-          { "in": "query", "name": "from", "required": true, "schema": { "type": "string", "format": "date" } },
-          { "in": "query", "name": "to", "required": true, "schema": { "type": "string", "format": "date" } }
+        "tags": [
+          "snapshot"
         ],
-        "responses": { "200": { "description": "Diff snapshot", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SnapshotDiffResponse" } } } } }
+        "summary": "Snapshot Diff",
+        "operationId": "snapshot_diff_snapshot_diff_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "current": {
+                      "type": "object",
+                      "properties": {
+                        "range": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "format": "date"
+                            },
+                            "to": {
+                              "type": "string",
+                              "format": "date"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "net_cashflow": {
+                          "type": "number"
+                        },
+                        "ef_amount": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "net_cashflow",
+                        "ef_amount"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "previous": {
+                      "type": "object",
+                      "properties": {
+                        "range": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "format": "date"
+                            },
+                            "to": {
+                              "type": "string",
+                              "format": "date"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "net_cashflow": {
+                          "type": "number"
+                        },
+                        "ef_amount": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "net_cashflow",
+                        "ef_amount"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "delta": {
+                      "type": "object",
+                      "properties": {
+                        "net_cashflow": {
+                          "type": "object",
+                          "properties": {
+                            "absolute": {
+                              "type": "number"
+                            },
+                            "pct": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "absolute",
+                            "pct"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "ef_amount": {
+                          "type": "object",
+                          "properties": {
+                            "absolute": {
+                              "type": "number"
+                            },
+                            "pct": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "absolute",
+                            "pct"
+                          ],
+                          "additionalProperties": true
+                        }
+                      },
+                      "required": [
+                        "net_cashflow",
+                        "ef_amount"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "served_from": {
+                          "type": "string"
+                        },
+                        "cache_age_seconds": {
+                          "type": "number"
+                        },
+                        "snapshot_created_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "served_from",
+                        "cache_age_seconds",
+                        "snapshot_created_at"
+                      ],
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "current",
+                    "previous",
+                    "delta",
+                    "meta"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
       }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Transaction": {
-        "type": "object",
-        "properties": {
-          "lm_id": { "type": "integer" },
-          "date_posted": { "type": "string", "format": "date" },
-          "amount": { "type": "number" },
-          "currency": { "type": "string" },
-          "payee": { "type": "string", "nullable": true },
-          "note": { "type": "string", "nullable": true },
-          "category": { "type": "string", "nullable": true },
-          "ignored": { "type": "boolean" }
-        },
-        "required": ["lm_id","date_posted","amount","currency","ignored"]
-      },
-      "TransactionPatch": {
-        "type": "object",
-        "properties": {
-          "category": { "type": "string", "nullable": true },
-          "ignored": { "type": "boolean" },
-          "note": { "type": "string", "nullable": true },
-          "payee": { "type": "string", "nullable": true }
-        },
-        "additionalProperties": false
-      },
-      "Category": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "affects_cashflow": { "type": "boolean" },
-          "budgetable": { "type": "boolean" },
-          "is_income": { "type": "boolean" }
-        },
-        "required": ["id","name","affects_cashflow","budgetable","is_income"]
-      },
-      "CategoryCreate": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "affects_cashflow": { "type": "boolean", "default": true },
-          "budgetable": { "type": "boolean", "default": true },
-          "is_income": { "type": "boolean", "default": false }
-        },
-        "required": ["id","name"]
-      },
-      "CategoryPatch": {
-        "type": "object",
-        "properties": {
-          "name": { "type": "string" },
-          "affects_cashflow": { "type": "boolean" },
-          "budgetable": { "type": "boolean" },
-          "is_income": { "type": "boolean" }
-        },
-        "additionalProperties": false
-      },
-      "BudgetUpsert": {
-        "type": "object",
-        "properties": { "amount": { "type": "number" } },
-        "required": ["amount"]
-      },
-      "BudgetItem": {
-        "type": "object",
-        "properties": {
-          "category_id": { "type": "string" },
-          "category_name": { "type": "string" },
-          "year": { "type": "integer" },
-          "month": { "type": "integer" },
-          "amount": { "type": "number" }
-        }
-      },
-      "BudgetVsActualItem": {
-        "type": "object",
-        "properties": {
-          "category_id": { "type": "string" },
-          "category_name": { "type": "string" },
-          "type": { "type": "string", "enum": ["income","expense","transfer"] },
-          "budgeted": { "type": "number" },
-          "actual": { "type": "number" },
-          "variance": { "type": "number" }
-        }
-      },
-      "Bill": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "amount": { "type": "number" },
-          "currency": { "type": "string" },
-          "frequency": { "type": "string", "enum": ["weekly","monthly","yearly"] },
-          "weekday": { "type": "integer", "nullable": true },
-          "day_of_month": { "type": "integer", "nullable": true },
-          "start_date": { "type": "string", "format": "date", "nullable": true },
-          "end_date": { "type": "string", "format": "date", "nullable": true }
-        }
-      },
-      "BillCreate": { "$ref": "#/components/schemas/Bill" },
-      "BillPatch": { "$ref": "#/components/schemas/Bill" },
-      "ContribBody": {
-        "type": "object",
-        "properties": { "amount": { "type": "number" }, "note": { "type": "string" } },
-        "required": ["amount"]
-      },
-      "BillOccurrence": {
-        "type": "object",
-        "properties": {
-          "bill_id": { "type": "string" },
-          "name": { "type": "string" },
-          "due": { "type": "string", "format": "date" },
-          "amount": { "type": "number" },
-          "progress_pct": { "type": "number" },
-          "paid": { "type": "boolean" },
-          "contrib_sum": { "type": "number" },
-          "paid_sum": { "type": "number" },
-          "saved_so_far": { "type": "number" },
-          "days_to_due": { "type": "integer" },
-          "due_soon": { "type": "boolean" },
-          "priority_score": { "type": "number" }
-        }
-      },
-      "BillLedgerResponse": {
-        "type": "object",
-        "properties": {
-          "bill_id": { "type": "string" },
-          "from": { "type": "string" },
-          "to": { "type": "string" },
-          "contrib_sum": { "type": "number" },
-          "paid_sum": { "type": "number" },
-          "entries": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "occurred_at": { "type": "string" },
-                "amount": { "type": "number" },
-                "note": { "type": "string" }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": true
+                }
               }
             }
           }
-        }
-      },
-      "BalancesSnapshot": {
-        "type": "object",
-        "properties": {
-          "liquid_total": { "type": "number" },
-          "non_liquid_total": { "type": "number" },
-          "accounts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "type": "string" },
-                "name": { "type": "string" },
-                "provider": { "type": "string" },
-                "type": { "type": "string" },
-                "subtype": { "type": "string" },
-                "is_liquid": { "type": "boolean" },
-                "balance": { "type": "number" },
-                "currency": { "type": "string" },
-                "as_of": { "type": "string" },
-                "balance_change_pct": { "type": "number", "nullable": true }
-              }
-            }
-          }
-        }
-      },
-      "EFResponse": {
-        "type": "object",
-        "properties": {
-          "baseline_monthly_outflow": { "type": "number" },
-          "target": { "type": "number" },
-          "liquid": { "type": "number" },
-          "funded_pct": { "type": "number" },
-          "monthly_income": { "type": "number" },
-          "recommended_contribution": { "type": "number" }
-        }
-      },
-      "BreakdownBody": {
-        "type": "object",
-        "properties": {
-          "amount": { "type": "number" },
-          "reserve_cushion": { "type": "number", "default": 200, "minimum": 0 },
-          "due_soon_days": { "type": "integer", "default": 14, "minimum": 1, "maximum": 60 },
-          "year": { "type": "integer" },
-          "month": { "type": "integer" }
-        },
-        "required": ["amount"]
-      },
-      "BreakdownResponse": {
-        "type": "object",
-        "properties": {
-          "input_amount": { "type": "number" },
-          "reserve_cushion": { "type": "number" },
-          "allocated": {
-            "type": "object",
-            "properties": {
-              "bills": { "type": "array", "items": { "type": "object", "properties": { "to": { "type": "string" }, "name": { "type": "string" }, "due": { "type": "string" }, "amount": { "type": "number" } } } },
-              "budgets": { "type": "array", "items": { "type": "object", "properties": { "to": { "type": "string" }, "name": { "type": "string" }, "amount": { "type": "number" } } } },
-              "ef": { "type": "number" }
-            }
-          },
-          "summary": {
-            "type": "object",
-            "properties": {
-              "to_bills": { "type": "number" },
-              "to_budgets": { "type": "number" },
-              "to_ef": { "type": "number" },
-              "unallocated": { "type": "number" }
-            }
-          }
-        }
-      },
-      "SyncResponse": {
-        "type": "object",
-        "properties": {
-          "start": { "type": "string" },
-          "end": { "type": "string" },
-          "fetched": { "type": "integer" },
-          "upserted_into_lm_transactions": { "type": "integer" },
-          "inserted_into_transactions": { "type": "integer" },
-          "accounts_processed": { "type": "integer" },
-          "balance_snapshots": { "type": "integer" }
-        }
-      },
-      "PeriodRange": {
-        "type": "object",
-        "properties": { "from": { "type": "string", "format": "date" }, "to": { "type": "string", "format": "date" } },
-        "required": ["from","to"]
-      },
-      "SnapshotMeta": {
-        "type": "object",
-        "properties": {
-          "served_from": { "type": "string" },
-          "cache_age_seconds": { "type": "integer" },
-          "snapshot_created_at": { "type": "string", "format": "date-time" }
-        },
-        "required": ["served_from","cache_age_seconds","snapshot_created_at"]
-      },
-      "CashflowCategory": {
-        "type": "object",
-        "properties": {
-          "category_id": { "type": "string" },
-          "category_name": { "type": "string" },
-          "type": { "type": "string", "enum": ["income","expense","transfer"] },
-          "total": { "type": "number" }
-        }
-      },
-      "TopOutflowPayee": {
-        "type": "object",
-        "properties": {
-          "payee": { "type": "string" },
-          "spend": { "type": "number" }
-        }
-      },
-      "SnapshotCashflow": {
-        "type": "object",
-        "properties": {
-          "inflow": { "type": "number" },
-          "outflow": { "type": "number" },
-          "net": { "type": "number" },
-          "by_category": { "type": "array", "items": { "$ref": "#/components/schemas/CashflowCategory" } },
-          "top_outflow_payees": { "type": "array", "items": { "$ref": "#/components/schemas/TopOutflowPayee" } }
-        }
-      },
-      "BillSnapshot": {
-        "type": "object",
-        "properties": {
-          "bill_id": { "type": "string" },
-          "name": { "type": "string" },
-          "due": { "type": "string", "format": "date" },
-          "amount": { "type": "number" },
-          "progress_pct": { "type": "number" },
-          "paid": { "type": "boolean" },
-          "contrib_sum": { "type": "number" },
-          "paid_sum": { "type": "number" },
-          "status": { "type": "string", "enum": ["active","overdue","paid"] }
-        }
-      },
-      "SnapshotResponse": {
-        "type": "object",
-        "properties": {
-          "range": { "$ref": "#/components/schemas/PeriodRange" },
-          "cashflow": { "$ref": "#/components/schemas/SnapshotCashflow" },
-          "budgets": { "type": "array", "items": { "$ref": "#/components/schemas/BudgetVsActualItem" }, "nullable": true },
-          "bills": { "type": "array", "items": { "$ref": "#/components/schemas/BillSnapshot" } },
-          "balances": { "$ref": "#/components/schemas/BalancesSnapshot" },
-          "ef": { "$ref": "#/components/schemas/EFResponse" },
-          "meta": { "$ref": "#/components/schemas/SnapshotMeta" }
-        }
-      },
-      "SnapshotDiffResponse": {
-        "type": "object",
-        "properties": {
-          "current": {
-            "type": "object",
-            "properties": {
-              "range": { "$ref": "#/components/schemas/PeriodRange" },
-              "net_cashflow": { "type": "number" },
-              "ef_amount": { "type": "number" }
-            }
-          },
-          "previous": {
-            "type": "object",
-            "properties": {
-              "range": { "$ref": "#/components/schemas/PeriodRange" },
-              "net_cashflow": { "type": "number" },
-              "ef_amount": { "type": "number" }
-            }
-          },
-          "diff": {
-            "type": "object",
-            "properties": {
-              "net_cashflow": {
-                "type": "object",
-                "properties": { "absolute": { "type": "number" }, "pct": { "type": "number", "nullable": true } }
-              },
-              "ef_amount": {
-                "type": "object",
-                "properties": { "absolute": { "type": "number" }, "pct": { "type": "number", "nullable": true } }
-              }
-            }
-          },
-          "meta": { "$ref": "#/components/schemas/SnapshotMeta" }
         }
       }
     }
