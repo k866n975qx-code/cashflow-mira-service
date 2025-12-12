@@ -231,15 +231,15 @@ def full_snapshot(
           LEFT JOIN a ON a.category_id = b.category_id
           ORDER BY e.name
         """, (year, month, month_start, next_month))
-        rows = cur.fetchall()
-        budgets = [{
-            "category_id": r[0],
-            "category_name": r[1],
-            "type": _category_type(bool(r[2]), bool(r[3])),
-            "budgeted": _money(r[4]),
-            "actual": _money(r[5]),
-            "variance": _money(_money(r[4]) - _money(r[5])),
-        } for r in rows]
+            rows = cur.fetchall()
+            budgets = [{
+                "category_id": r[0],
+                "category_name": r[1],
+                "type": _category_type(bool(r[2]), bool(r[3])),
+                "budgeted": _money(r[4]),
+                "actual": _money(r[5]),
+                "variance": _money(_money(r[4]) - _money(r[5])),
+            } for r in rows]
 
     # --- BILLS occurrences in range (with progress) ---
     with get_conn() as conn, conn.cursor() as cur:
