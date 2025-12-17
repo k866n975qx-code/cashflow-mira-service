@@ -98,6 +98,60 @@ def list_uncategorized_transactions(
         rows = cur.fetchall()
     return [TxnOut(**row_to_dict(r)) for r in rows] if rows else []
 
+
+@router.get("/categorized", response_model=list[TxnOut], summary="List categorized transactions")
+def list_categorized_transactions(
+    ignored: Optional[bool] = None,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> list[TxnOut]:
+    """
+    Convenience endpoint to fetch only categorized transactions (category present).
+    Mirrors list_transactions semantics, including ignored filtering.
+    """
+    sql = f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
+                     {IGNORED_EXPR} AS ignored
+              FROM transactions t
+              LEFT JOIN categories c ON c.id = t.category
+              WHERE (t.category IS NOT NULL AND t.category <> '')"""
+    args = []
+    if ignored is not None:
+        sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
+    sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
+    args.extend([limit, offset])
+
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql, args)
+        rows = cur.fetchall()
+    return [TxnOut(**row_to_dict(r)) for r in rows] if rows else []
+
+
+@router.get("/category/{category_id}", response_model=list[TxnOut], summary="List transactions by category id")
+def list_category_transactions(
+    category_id: str,
+    ignored: Optional[bool] = None,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> list[TxnOut]:
+    """
+    Fetch only transactions for a specific category id (case-insensitive).
+    """
+    sql = f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
+                     {IGNORED_EXPR} AS ignored
+              FROM transactions t
+              LEFT JOIN categories c ON c.id = t.category
+              WHERE LOWER(t.category) = LOWER(%s)"""
+    args = [category_id]
+    if ignored is not None:
+        sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
+    sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
+    args.extend([limit, offset])
+
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql, args)
+        rows = cur.fetchall()
+    return [TxnOut(**row_to_dict(r)) for r in rows] if rows else []
+
 @router.get("/{lm_id}")
 def get_transaction(lm_id: int):
     with get_conn() as conn, conn.cursor() as cur:

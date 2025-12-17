@@ -301,6 +301,168 @@
         }
       }
     },
+    "/transactions/categorized": {
+      "get": {
+        "tags": [
+          "transactions"
+        ],
+        "summary": "List Categorized Transactions",
+        "operationId": "list_categorized_transactions_transactions_categorized_get",
+        "parameters": [
+          {
+            "name": "ignored",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lm_id": { "type": "integer" },
+                      "date_posted": { "type": "string", "format": "date" },
+                      "amount": { "type": "number" },
+                      "currency": { "type": "string" },
+                      "payee": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "note": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "category": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "ignored": { "type": "boolean" }
+                    },
+                    "required": ["lm_id","date_posted","amount","currency","ignored"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
+    "/transactions/category/{category_id}": {
+      "get": {
+        "tags": [
+          "transactions"
+        ],
+        "summary": "List transactions by category id",
+        "operationId": "list_category_transactions_transactions_category__category_id__get",
+        "parameters": [
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ignored",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lm_id": { "type": "integer" },
+                      "date_posted": { "type": "string", "format": "date" },
+                      "amount": { "type": "number" },
+                      "currency": { "type": "string" },
+                      "payee": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "note": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "category": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "ignored": { "type": "boolean" }
+                    },
+                    "required": ["lm_id","date_posted","amount","currency","ignored"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
     "/transactions/{lm_id}": {
       "get": {
         "tags": [
