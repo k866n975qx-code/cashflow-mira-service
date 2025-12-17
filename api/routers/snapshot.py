@@ -116,7 +116,7 @@ def full_snapshot(
                    COALESCE(c.affects_cashflow, true) AS affects_cashflow,
                    COALESCE(c.is_income, false) AS is_income
             FROM transactions t
-            LEFT JOIN categories c ON c.id = t.category_id
+            LEFT JOIN categories c ON LOWER(c.id) = LOWER(t.category_id)
             WHERE t.ignored = false
               AND t.date_posted >= %s AND t.date_posted <= %s
           )
