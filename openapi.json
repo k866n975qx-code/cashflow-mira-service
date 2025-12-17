@@ -184,7 +184,7 @@
                 }
               ]
             },
-            "description": "Filter by category id. Use null to return only uncategorized transactions."
+            "description": "Filter by category id. Use null or _uncategorized to return only uncategorized transactions."
           },
           {
             "name": "uncategorized",

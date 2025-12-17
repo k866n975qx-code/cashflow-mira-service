@@ -52,7 +52,7 @@ def list_transactions(
     if ignored is not None:
         sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
     cat_norm = category.lower() if isinstance(category, str) else None
-    if uncategorized is True or cat_norm == "null":
+    if uncategorized is True or cat_norm in ("null", "_uncategorized"):
         sql += " AND (t.category IS NULL OR t.category = '')"
     elif uncategorized is False:
         sql += " AND (t.category IS NOT NULL AND t.category <> '')"
