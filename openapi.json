@@ -175,16 +175,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "type": "boolean",
+              "default": true
             },
-            "description": "Filter by uncategorized state: true=only uncategorized, false=only categorized, omitted=no filter."
+            "description": "Filter by uncategorized state: true=only uncategorized (default), false=only categorized."
           },
           {
             "name": "limit",

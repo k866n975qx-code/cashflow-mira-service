@@ -32,7 +32,7 @@ def list_transactions(
     date_from: Optional[date] = Query(None, alias="from"),
     date_to: Optional[date] = Query(None, alias="to"),
     ignored: Optional[bool] = None,
-    uncategorized: Optional[bool] = None,
+    uncategorized: bool = Query(True),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
