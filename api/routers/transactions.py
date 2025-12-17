@@ -14,6 +14,17 @@ class TxnPatch(BaseModel):
     payee: Optional[str] = None
 
 
+class TxnOut(BaseModel):
+    lm_id: int
+    date_posted: date
+    amount: float
+    currency: str
+    payee: Optional[str] = None
+    note: Optional[str] = None
+    category: Optional[str] = None
+    ignored: bool
+
+
 class BatchTxnPatchItem(TxnPatch):
     lm_id: int
 
@@ -32,7 +43,7 @@ def row_to_dict(row):
 # -------- endpoints --------
 IGNORED_EXPR = "COALESCE(CASE WHEN c.affects_cashflow IS NOT NULL THEN NOT c.affects_cashflow END, t.ignored)"
 
-@router.get("")
+@router.get("", response_model=list[TxnOut])
 def list_transactions(
     date_from: Optional[date] = Query(None, alias="from"),
     date_to: Optional[date] = Query(None, alias="to"),
