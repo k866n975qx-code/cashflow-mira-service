@@ -125,7 +125,10 @@ def full_snapshot(
             SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS gross_inflow,
             SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) AS gross_outflow,
             -- true income/expense respect category flags
-            SUM(CASE WHEN is_income AND affects_cashflow AND amount > 0 THEN amount ELSE 0 END) AS true_income,
+            SUM(CASE
+                  WHEN is_income AND affects_cashflow AND amount > 0 THEN amount
+                  WHEN is_income AND affects_cashflow AND amount < 0 THEN -amount
+                  ELSE 0 END) AS true_income,
             SUM(CASE
                   WHEN affects_cashflow AND NOT is_income AND amount < 0 THEN -amount
                   WHEN affects_cashflow AND NOT is_income AND amount > 0 THEN amount
