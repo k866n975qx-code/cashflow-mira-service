@@ -256,6 +256,83 @@
         }
       }
     },
+    "/transactions/uncategorized": {
+      "get": {
+        "tags": [
+          "transactions"
+        ],
+        "summary": "List Uncategorized Transactions",
+        "operationId": "list_uncategorized_transactions_transactions_uncategorized_get",
+        "parameters": [
+          {
+            "name": "ignored",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lm_id": { "type": "integer" },
+                      "date_posted": { "type": "string", "format": "date" },
+                      "amount": { "type": "number" },
+                      "currency": { "type": "string" },
+                      "payee": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "note": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "category": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "ignored": { "type": "boolean" }
+                    },
+                    "required": ["lm_id","date_posted","amount","currency","ignored"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
     "/transactions/{lm_id}": {
       "get": {
         "tags": [

@@ -52,7 +52,7 @@ def list_transactions(
     uncategorized: Optional[bool] = Query(None),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-) -> list[dict]:
+) -> list[TxnOut]:
     sql = f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
                      {IGNORED_EXPR} AS ignored
               FROM transactions t
@@ -72,6 +72,33 @@ def list_transactions(
         sql += " AND (t.category IS NOT NULL AND t.category <> '')"
     elif category is not None:
         sql += " AND LOWER(t.category) = %s"; args.append(cat_norm or "")
+    sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
+    args.extend([limit, offset])
+
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(sql, args)
+        rows = cur.fetchall()
+    return [TxnOut(**row_to_dict(r)) for r in rows] if rows else []
+
+
+@router.get("/uncategorized", response_model=list[TxnOut], summary="List uncategorized transactions")
+def list_uncategorized_transactions(
+    ignored: Optional[bool] = None,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> list[TxnOut]:
+    """
+    Convenience endpoint to fetch only uncategorized transactions (category is NULL/empty).
+    Mirrors list_transactions semantics, including ignored filtering.
+    """
+    sql = f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
+                     {IGNORED_EXPR} AS ignored
+              FROM transactions t
+              LEFT JOIN categories c ON c.id = t.category
+              WHERE (t.category IS NULL OR t.category = '')"""
+    args = []
+    if ignored is not None:
+        sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
     sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
     args.extend([limit, offset])
 
@@ -180,7 +207,7 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
                 # skip missing; could accumulate errors if desired
                 continue
 
-            current = dict(zip(cols, row))
+            current = row_to_dict(row)
 
             # determine changes
             updates = {}
@@ -233,7 +260,7 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
                 (lm_id,),
             )
             updated = cur.fetchone()
-            results.append(dict(zip(cols, updated)))
+            results.append(row_to_dict(updated))
 
         conn.commit()
 
