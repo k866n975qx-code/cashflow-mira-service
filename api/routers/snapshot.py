@@ -136,12 +136,10 @@ def full_snapshot(
           FROM src
         """, (date_from, date_to))
         gross_inflow_val, gross_outflow_val, true_income_val, true_expense_val = cur.fetchone()
-        gross_inflow = _safe_amount(float(gross_inflow_val or 0.0))
-        gross_outflow = _safe_amount(float(gross_outflow_val or 0.0))
         true_income = _safe_amount(float(true_income_val or 0.0))
         true_expense = _safe_amount(float(true_expense_val or 0.0))
-        inflow = gross_inflow  # backward-compat alias
-        outflow_mag = gross_outflow
+        inflow = true_income
+        outflow_mag = true_expense
         net = _safe_amount(inflow - outflow_mag)
 
         # by-category (only affects_cashflow=true)
@@ -192,17 +190,9 @@ def full_snapshot(
         top_payees = [{"payee": r[0], "spend": float(r[1] or 0)} for r in cur.fetchall()]
 
     cashflow = {
-        # backward-compatible keys
         "inflow": _money(inflow),
         "outflow": _money(outflow_mag),   # positive magnitude of spend
         "net": _money(net),               # inflow - outflow
-        # new dual-layer metrics
-        "gross_inflow": _money(gross_inflow),
-        "gross_outflow": _money(gross_outflow),
-        "gross_net": _money(gross_inflow - gross_outflow),
-        "true_income": _money(true_income),
-        "true_expense": _money(true_expense),
-        "true_net": _money(true_income - true_expense),
         "by_category": by_cat,
         "top_outflow_payees": top_payees,
     }
