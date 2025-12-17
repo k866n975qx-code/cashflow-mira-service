@@ -42,7 +42,7 @@ def list_transactions(
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ) -> list[dict]:
-    sql = f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+    sql = f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
                      {IGNORED_EXPR} AS ignored
               FROM transactions t
               LEFT JOIN categories c ON c.id = t.category
@@ -74,7 +74,7 @@ def list_transactions(
 def get_transaction(lm_id: int):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
-            f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+            f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
                         {IGNORED_EXPR} AS ignored
                 FROM transactions t
                 LEFT JOIN categories c ON c.id = t.category
@@ -90,7 +90,7 @@ def get_transaction(lm_id: int):
 def patch_transaction(lm_id: int, body: TxnPatch):
     # fetch current
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("""SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
+        cur.execute("""SELECT lm_id, date_posted, amount::float, currency, payee, note, category, ignored
                        FROM transactions WHERE lm_id = %s""", (lm_id,))
         row = cur.fetchone()
         if not row:
@@ -136,7 +136,7 @@ def patch_transaction(lm_id: int, body: TxnPatch):
 
         # return updated row
         cur.execute(
-            f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+            f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
                         {IGNORED_EXPR} AS ignored
                  FROM transactions t
                  LEFT JOIN categories c ON c.id = t.category
@@ -161,7 +161,7 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
 
             # load current row
             cur.execute(
-                """SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
+                """SELECT lm_id, date_posted, amount::float, currency, payee, note, category, ignored
                    FROM transactions WHERE lm_id = %s""",
                 (lm_id,),
             )
@@ -215,7 +215,7 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
 
             # fetch updated row
             cur.execute(
-                f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+                f"""SELECT t.lm_id, t.date_posted, t.amount::float, t.currency, t.payee, t.note, t.category,
                             {IGNORED_EXPR} AS ignored
                        FROM transactions t
                        LEFT JOIN categories c ON c.id = t.category
