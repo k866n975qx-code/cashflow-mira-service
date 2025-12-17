@@ -27,6 +27,8 @@ def row_to_dict(row):
     return dict(zip(cols, row))
 
 # -------- endpoints --------
+IGNORED_EXPR = "COALESCE(CASE WHEN c.affects_cashflow IS NOT NULL THEN NOT c.affects_cashflow END, t.ignored)"
+
 @router.get("")
 def list_transactions(
     date_from: Optional[date] = Query(None, alias="from"),
@@ -36,20 +38,23 @@ def list_transactions(
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
-    sql = """SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
-             FROM transactions WHERE 1=1"""
+    sql = f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+                     {IGNORED_EXPR} AS ignored
+              FROM transactions t
+              LEFT JOIN categories c ON c.id = t.category
+              WHERE 1=1"""
     args = []
     if date_from:
-        sql += " AND date_posted >= %s"; args.append(date_from)
+        sql += " AND t.date_posted >= %s"; args.append(date_from)
     if date_to:
-        sql += " AND date_posted <= %s"; args.append(date_to)
+        sql += " AND t.date_posted <= %s"; args.append(date_to)
     if ignored is not None:
-        sql += " AND ignored = %s"; args.append(ignored)
+        sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
     if uncategorized is True:
-        sql += " AND (category IS NULL OR category = '')"
+        sql += " AND (t.category IS NULL OR t.category = '')"
     elif uncategorized is False:
-        sql += " AND (category IS NOT NULL AND category <> '')"
-    sql += " ORDER BY date_posted DESC, lm_id DESC LIMIT %s OFFSET %s"
+        sql += " AND (t.category IS NOT NULL AND t.category <> '')"
+    sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
     args.extend([limit, offset])
 
     with get_conn() as conn, conn.cursor() as cur:
@@ -60,8 +65,14 @@ def list_transactions(
 @router.get("/{lm_id}")
 def get_transaction(lm_id: int):
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("""SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
-                       FROM transactions WHERE lm_id = %s""", (lm_id,))
+        cur.execute(
+            f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+                        {IGNORED_EXPR} AS ignored
+                FROM transactions t
+                LEFT JOIN categories c ON c.id = t.category
+               WHERE t.lm_id = %s""",
+            (lm_id,),
+        )
         row = cur.fetchone()
         if not row:
             raise HTTPException(404, "Not found")
@@ -79,10 +90,23 @@ def patch_transaction(lm_id: int, body: TxnPatch):
         current = row_to_dict(row)
 
         updates = {}
-        for field in ("category","ignored","note","payee"):
+        category_override_ignored = None
+
+        # category drives ignored: affects_cashflow=false => ignored=true; affects_cashflow=true => ignored=false
+        if body.category is not None and body.category != current.get("category"):
+            updates["category"] = body.category
+            cur.execute("SELECT affects_cashflow FROM categories WHERE id=%s", (body.category,))
+            cat_row = cur.fetchone()
+            affects_cashflow = cat_row[0] if cat_row is not None else True
+            category_override_ignored = not affects_cashflow
+
+        for field in ("ignored","note","payee"):
             val = getattr(body, field)
             if val is not None and val != current.get(field):
                 updates[field] = val
+
+        if category_override_ignored is not None and category_override_ignored != current.get("ignored"):
+            updates["ignored"] = category_override_ignored
 
         if not updates:
             return current  # nothing to change
@@ -103,8 +127,14 @@ def patch_transaction(lm_id: int, body: TxnPatch):
         conn.commit()
 
         # return updated row
-        cur.execute("""SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
-                       FROM transactions WHERE lm_id = %s""", (lm_id,))
+        cur.execute(
+            f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+                        {IGNORED_EXPR} AS ignored
+                 FROM transactions t
+                 LEFT JOIN categories c ON c.id = t.category
+                WHERE t.lm_id = %s""",
+            (lm_id,),
+        )
         return row_to_dict(cur.fetchone())
 
 
@@ -136,10 +166,22 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
 
             # determine changes
             updates = {}
-            for field in ("category", "ignored", "note", "payee"):
+            category_override_ignored = None
+
+            if op.category is not None and op.category != current.get("category"):
+                updates["category"] = op.category
+                cur.execute("SELECT affects_cashflow FROM categories WHERE id=%s", (op.category,))
+                cat_row = cur.fetchone()
+                affects_cashflow = cat_row[0] if cat_row is not None else True
+                category_override_ignored = not affects_cashflow
+
+            for field in ("ignored", "note", "payee"):
                 new_val = getattr(op, field)
                 if new_val is not None and new_val != current.get(field):
                     updates[field] = new_val
+
+            if category_override_ignored is not None and category_override_ignored != current.get("ignored"):
+                updates["ignored"] = category_override_ignored
 
             if not updates:
                 results.append(current)
@@ -165,8 +207,11 @@ def batch_patch_transactions(body: BatchTxnPatchRequest):
 
             # fetch updated row
             cur.execute(
-                """SELECT lm_id, date_posted, amount, currency, payee, note, category, ignored
-                   FROM transactions WHERE lm_id = %s""",
+                f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
+                            {IGNORED_EXPR} AS ignored
+                       FROM transactions t
+                       LEFT JOIN categories c ON c.id = t.category
+                      WHERE t.lm_id = %s""",
                 (lm_id,),
             )
             updated = cur.fetchone()
