@@ -151,8 +151,11 @@ def full_snapshot(
           WHERE t.ignored = false
             AND (c.affects_cashflow IS NULL OR c.affects_cashflow = true)
             AND t.date_posted >= %s AND t.date_posted <= %s
-          GROUP BY category_id, category_name, is_income, is_transfer
-          ORDER BY category_name
+          GROUP BY COALESCE(c.id, '_uncategorized'),
+                   COALESCE(c.name, 'Uncategorized'),
+                   COALESCE(c.is_income, false),
+                   false
+          ORDER BY COALESCE(c.name, 'Uncategorized')
         """, (date_from, date_to))
         by_cat = []
         for (cid, cname, is_income, is_transfer, total) in cur.fetchall():
