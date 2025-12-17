@@ -144,8 +144,8 @@ def full_snapshot(
           SELECT COALESCE(c.id, '_uncategorized') AS category_id,
                  COALESCE(c.name, 'Uncategorized') AS category_name,
                  COALESCE(c.is_income, false) AS is_income,
-                 false AS is_transfer,
-                 COALESCE(SUM(t.amount), 0) AS total
+                 COALESCE(SUM(t.amount), 0) AS total,
+                 false AS is_transfer
           FROM transactions t
           LEFT JOIN categories c ON c.id = t.category_id
           WHERE t.ignored = false
@@ -153,8 +153,7 @@ def full_snapshot(
             AND t.date_posted >= %s AND t.date_posted <= %s
           GROUP BY COALESCE(c.id, '_uncategorized'),
                    COALESCE(c.name, 'Uncategorized'),
-                   COALESCE(c.is_income, false),
-                   false
+                   COALESCE(c.is_income, false)
           ORDER BY COALESCE(c.name, 'Uncategorized')
         """, (date_from, date_to))
         by_cat = []
