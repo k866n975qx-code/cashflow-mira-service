@@ -34,6 +34,7 @@ def list_transactions(
     date_from: Optional[date] = Query(None, alias="from"),
     date_to: Optional[date] = Query(None, alias="to"),
     ignored: Optional[bool] = None,
+    category: Optional[str] = None,
     uncategorized: Optional[bool] = Query(None),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -50,10 +51,13 @@ def list_transactions(
         sql += " AND t.date_posted <= %s"; args.append(date_to)
     if ignored is not None:
         sql += f" AND {IGNORED_EXPR} = %s"; args.append(ignored)
-    if uncategorized is True:
+    cat_norm = category.lower() if isinstance(category, str) else None
+    if uncategorized is True or cat_norm == "null":
         sql += " AND (t.category IS NULL OR t.category = '')"
     elif uncategorized is False:
         sql += " AND (t.category IS NOT NULL AND t.category <> '')"
+    elif category is not None:
+        sql += " AND LOWER(t.category) = %s"; args.append(cat_norm or "")
     sql += " ORDER BY t.date_posted DESC, t.lm_id DESC LIMIT %s OFFSET %s"
     args.extend([limit, offset])
 
