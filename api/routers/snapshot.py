@@ -144,8 +144,8 @@ def full_snapshot(
           SELECT COALESCE(c.id, '_uncategorized') AS category_id,
                  COALESCE(c.name, 'Uncategorized') AS category_name,
                  COALESCE(c.is_income, false) AS is_income,
-                 COALESCE(SUM(t.amount), 0) AS total,
-                 false AS is_transfer
+                 false AS is_transfer,
+                 COALESCE(SUM(t.amount), 0) AS total
           FROM transactions t
           LEFT JOIN categories c ON c.id = t.category_id
           WHERE t.ignored = false
