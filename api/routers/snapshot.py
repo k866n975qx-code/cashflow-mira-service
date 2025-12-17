@@ -141,20 +141,19 @@ def full_snapshot(
 
         # by-category (only affects_cashflow=true)
         cur.execute("""
-          SELECT COALESCE(c.id, '_uncategorized') AS category_id,
-                 COALESCE(c.name, 'Uncategorized') AS category_name,
-                 COALESCE(c.is_income, false) AS is_income,
+          SELECT c.id AS category_id,
+                 c.name AS category_name,
+                 c.is_income AS is_income,
                  false AS is_transfer,
                  COALESCE(SUM(t.amount), 0) AS total
           FROM transactions t
-          LEFT JOIN categories c ON c.id = t.category_id
+          JOIN categories c ON c.id = t.category_id
           WHERE t.ignored = false
+            AND t.category_id IS NOT NULL
             AND (c.affects_cashflow IS NULL OR c.affects_cashflow = true)
             AND t.date_posted >= %s AND t.date_posted <= %s
-          GROUP BY COALESCE(c.id, '_uncategorized'),
-                   COALESCE(c.name, 'Uncategorized'),
-                   COALESCE(c.is_income, false)
-          ORDER BY COALESCE(c.name, 'Uncategorized')
+          GROUP BY c.id, c.name, c.is_income
+          ORDER BY c.name
         """, (date_from, date_to))
         by_cat = []
         for (cid, cname, is_income, is_transfer, total) in cur.fetchall():
