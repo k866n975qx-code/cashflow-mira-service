@@ -24,7 +24,10 @@ class BatchTxnPatchRequest(BaseModel):
 # -------- helpers --------
 def row_to_dict(row):
     cols = ["lm_id","date_posted","amount","currency","payee","note","category","ignored"]
-    return dict(zip(cols, row))
+    data = dict(zip(cols, row))
+    amt = data.get("amount")
+    data["amount"] = float(amt) if amt is not None else None
+    return data
 
 # -------- endpoints --------
 IGNORED_EXPR = "COALESCE(CASE WHEN c.affects_cashflow IS NOT NULL THEN NOT c.affects_cashflow END, t.ignored)"
