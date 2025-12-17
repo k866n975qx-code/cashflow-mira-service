@@ -171,6 +171,22 @@
             }
           },
           {
+            "name": "uncategorized",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Filter by uncategorized state: true=only uncategorized, false=only categorized, omitted=no filter."
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
