@@ -78,8 +78,7 @@ def list_transactions(
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(sql, args)
         rows = cur.fetchall()
-    results = [row_to_dict(r) for r in rows] if rows else []
-    return results
+    return [TxnOut(**row_to_dict(r)) for r in rows] if rows else []
 
 @router.get("/{lm_id}")
 def get_transaction(lm_id: int):

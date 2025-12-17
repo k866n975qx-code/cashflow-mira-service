@@ -278,21 +278,15 @@
                         ]
                       },
                       "ignored": {
-                        "anyOf": [
-                          {
-                            "type": "boolean"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
+                        "type": "boolean"
                       }
                     },
                     "required": [
                       "lm_id",
                       "date_posted",
                       "amount",
-                      "currency"
+                      "currency",
+                      "ignored"
                     ],
                     "additionalProperties": true
                   }
@@ -375,21 +369,15 @@
                       ]
                     },
                     "ignored": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "lm_id",
                     "date_posted",
                     "amount",
-                    "currency"
+                    "currency",
+                    "ignored"
                   ],
                   "additionalProperties": true
                 }
@@ -681,21 +669,15 @@
                         ]
                       },
                       "ignored": {
-                        "anyOf": [
-                          {
-                            "type": "boolean"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
+                        "type": "boolean"
                       }
                     },
                     "required": [
                       "lm_id",
                       "date_posted",
                       "amount",
-                      "currency"
+                      "currency",
+                      "ignored"
                     ],
                     "additionalProperties": true
                   }
