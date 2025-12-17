@@ -38,7 +38,7 @@ def list_transactions(
     uncategorized: Optional[bool] = Query(None),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-):
+) -> list[dict]:
     sql = f"""SELECT t.lm_id, t.date_posted, t.amount, t.currency, t.payee, t.note, t.category,
                      {IGNORED_EXPR} AS ignored
               FROM transactions t
@@ -64,7 +64,8 @@ def list_transactions(
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(sql, args)
         rows = cur.fetchall()
-    return [row_to_dict(r) for r in rows]
+    results = [row_to_dict(r) for r in rows] if rows else []
+    return results
 
 @router.get("/{lm_id}")
 def get_transaction(lm_id: int):
