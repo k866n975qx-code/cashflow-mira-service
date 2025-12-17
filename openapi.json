@@ -171,38 +171,6 @@
             }
           },
           {
-            "name": "category",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "description": "Filter by category id. Use null or _uncategorized to return only uncategorized transactions."
-          },
-          {
-            "name": "uncategorized",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "description": "Filter by uncategorized state: true=only uncategorized, false=only categorized, omitted=no filter. Equivalent to category=null when true."
-          },
-          {
             "name": "limit",
             "in": "query",
             "required": false,
