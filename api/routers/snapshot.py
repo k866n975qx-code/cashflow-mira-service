@@ -116,7 +116,7 @@ def full_snapshot(
                    COALESCE(c.affects_cashflow, true) AS affects_cashflow,
                    COALESCE(c.is_income, false) AS is_income
             FROM transactions t
-            LEFT JOIN categories c ON c.id = t.category
+            LEFT JOIN categories c ON c.id = t.category_id
             WHERE t.ignored = false
               AND t.date_posted >= %s AND t.date_posted <= %s
           )
@@ -147,7 +147,7 @@ def full_snapshot(
                  false AS is_transfer,
                  COALESCE(SUM(t.amount), 0) AS total
           FROM transactions t
-          LEFT JOIN categories c ON c.id = t.category
+          LEFT JOIN categories c ON c.id = t.category_id
           WHERE t.ignored = false
             AND (c.affects_cashflow IS NULL OR c.affects_cashflow = true)
             AND t.date_posted >= %s AND t.date_posted <= %s
@@ -172,7 +172,7 @@ def full_snapshot(
                       WHEN (c.affects_cashflow IS NULL OR c.affects_cashflow = true) AND t.amount > 0 AND COALESCE(c.is_income,false) = false THEN t.amount
                       ELSE 0 END) AS spend
           FROM transactions t
-          LEFT JOIN categories c ON c.id = t.category
+          LEFT JOIN categories c ON c.id = t.category_id
           WHERE t.ignored = false
             AND t.date_posted >= %s AND t.date_posted <= %s
           GROUP BY payee
@@ -212,18 +212,18 @@ def full_snapshot(
             WHERE year = %s AND month = %s
           ),
           a AS (
-            SELECT t.category AS category_id,
+            SELECT t.category_id AS category_id,
                    COALESCE(SUM(CASE
                      WHEN t.amount < 0 THEN -t.amount
                      WHEN t.amount > 0 AND COALESCE(c.is_income,false) = false THEN t.amount
                      ELSE 0 END), 0) AS actual_spend
             FROM transactions t
-            JOIN elig e ON e.id = t.category
-            JOIN categories c ON c.id = t.category
+            JOIN elig e ON e.id = t.category_id
+            JOIN categories c ON c.id = t.category_id
             WHERE t.ignored = false
               AND t.date_posted >= %s
               AND t.date_posted < %s
-            GROUP BY t.category
+            GROUP BY t.category_id
           )
           SELECT e.id, e.name, e.is_income, e.is_transfer, COALESCE(b.amount, 0) AS budgeted, COALESCE(a.actual_spend, 0) AS actual
           FROM b
@@ -360,7 +360,7 @@ def full_snapshot(
           WITH t AS (
             SELECT t.amount, COALESCE(c.affects_cashflow, true) AS affects_cashflow
             FROM transactions t
-            LEFT JOIN categories c ON c.id = t.category
+            LEFT JOIN categories c ON c.id = t.category_id
             WHERE t.ignored = false
               AND t.date_posted >= (date_trunc('month', CURRENT_DATE) - INTERVAL '3 months')
               AND t.date_posted <  date_trunc('month', CURRENT_DATE)
@@ -386,7 +386,7 @@ def full_snapshot(
             SELECT t.amount, COALESCE(c.affects_cashflow, true) AS affects_cashflow,
                    COALESCE(c.is_income, false) AS is_income
             FROM transactions t
-            LEFT JOIN categories c ON c.id = t.category
+            LEFT JOIN categories c ON c.id = t.category_id
             WHERE t.ignored = false
               AND t.date_posted >= date_trunc('month', CURRENT_DATE)
               AND t.date_posted <  (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month')
