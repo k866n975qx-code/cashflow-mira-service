@@ -234,61 +234,17 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "lm_id": {
-                        "type": "integer"
-                      },
-                      "date_posted": {
-                        "type": "string",
-                        "format": "date"
-                      },
-                      "amount": {
-                        "type": "number"
-                      },
-                      "currency": {
-                        "type": "string"
-                      },
-                      "payee": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "note": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "category": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "ignored": {
-                        "type": "boolean"
-                      }
+                      "lm_id": { "type": "integer" },
+                      "date_posted": { "type": "string", "format": "date" },
+                      "amount": { "type": "number" },
+                      "currency": { "type": "string" },
+                      "payee": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "note": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "category": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "ignored": { "type": "boolean" }
                     },
-                    "required": [
-                      "lm_id",
-                      "date_posted",
-                      "amount",
-                      "currency",
-                      "ignored"
-                    ],
-                    "additionalProperties": true
+                    "required": ["lm_id","date_posted","amount","currency","ignored"],
+                    "additionalProperties": false
                   }
                 }
               }
@@ -338,16 +294,16 @@
                     "currency": {
                       "type": "string"
                     },
-                    "payee": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
+                  "payee": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                     "note": {
                       "anyOf": [
                         {
@@ -366,23 +322,23 @@
                         {
                           "type": "null"
                         }
-                      ]
-                    },
-                    "ignored": {
-                      "type": "boolean"
-                    }
+                    ]
                   },
-                  "required": [
-                    "lm_id",
-                    "date_posted",
-                    "amount",
-                    "currency",
-                    "ignored"
-                  ],
-                  "additionalProperties": true
-                }
+                  "ignored": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "lm_id",
+                  "date_posted",
+                  "amount",
+                  "currency",
+                  "ignored"
+                ],
+                "additionalProperties": false
               }
             }
+          }
           },
           "404": {
             "description": "Not Found"
@@ -625,61 +581,17 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "lm_id": {
-                        "type": "integer"
-                      },
-                      "date_posted": {
-                        "type": "string",
-                        "format": "date"
-                      },
-                      "amount": {
-                        "type": "number"
-                      },
-                      "currency": {
-                        "type": "string"
-                      },
-                      "payee": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "note": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "category": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "ignored": {
-                        "type": "boolean"
-                      }
+                      "lm_id": { "type": "integer" },
+                      "date_posted": { "type": "string", "format": "date" },
+                      "amount": { "type": "number" },
+                      "currency": { "type": "string" },
+                      "payee": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "note": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "category": { "anyOf": [ { "type": "string" }, { "type": "null" } ] },
+                      "ignored": { "type": "boolean" }
                     },
-                    "required": [
-                      "lm_id",
-                      "date_posted",
-                      "amount",
-                      "currency",
-                      "ignored"
-                    ],
-                    "additionalProperties": true
+                    "required": ["lm_id","date_posted","amount","currency","ignored"],
+                    "additionalProperties": false
                   }
                 }
               }
